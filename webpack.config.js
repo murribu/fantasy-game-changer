@@ -21,7 +21,8 @@ var options = {
   entry: {
     popup: path.join(__dirname, "src", "js", "popup.js"),
     options: path.join(__dirname, "src", "js", "options.js"),
-    background: path.join(__dirname, "src", "js", "background.js")
+    background: path.join(__dirname, "src", "js", "background.js"),
+    content_scripts: path.join(__dirname, "src", "js", "content_scripts.js")
   },
   output: {
     path: path.join(__dirname, "build"),
@@ -45,6 +46,10 @@ var options = {
         test: /\.js$/,
         loader: 'babel-loader',
         exclude: /node_modules/
+      },
+      { 
+        test: /\.(eot|woff)$/, 
+        loader: "url-loader" 
       },
       {
         test: /\.(png|jpg|gif|svg)$/,
@@ -86,8 +91,7 @@ var options = {
       filename: "background.html",
       chunks: ["background"]
     }),
-    new WriteFilePlugin(),
-    new ExtractTextPlugin("style.css"),
+    new WriteFilePlugin()
   ]
 };
 
