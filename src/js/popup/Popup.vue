@@ -30,7 +30,7 @@
 	  		</div>
   		</div>
   		<div class="container" v-if="currentSite == 'thebaseballgauge.com'">
-  			<h1>Yo</h1>
+  			<div class="alert-info">You just loaded a site from TheBaseballGauge! We're trying to load your team into the GameChanger</div>
   		</div>
   </div>
 </template>
