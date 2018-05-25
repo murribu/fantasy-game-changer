@@ -1,21 +1,36 @@
 <template>
   <div id="app" style="width:400px;margin:5px;">
-  		<div class="container">
+  		<div class="container" v-if="currentSite != 'thebaseballgauge.com'">
   			<div class="row" v-for="team in teams">
-	      		<div class="col-1">
-	      			<div class="btn btn-danger">&times;</div>
+	      		<div class="col-2">
+	      			<div class="btn btn-danger" @click.prevent="remove(team)">&times;</div>
 	      		</div>
-	      		<div class="col-8">
-	      			<span v-if="team.name && !team.showNameBox" class="pointy" alt="Click to change the Name" @click.prevent="showNameBox(team)">{{ team.name }}</span>
-	      			<span v-if="team.showNameBox"><input v-model="team.name" @onblur="save" /></span>
+	      		<div class="col-6">
+	      			<span v-if="team.name && !team.editing" 
+	      				class="pointy" 
+	      				alt="Click to change the Name" 
+	      				@click.prevent="team.editing = true">{{ team.name }}</span>
+	      			<span v-if="team.editing"><input v-model="team.name" @blur="team.editing = false" class="team-name" /></span>
+	      		</div>
+	      		<div class="col-2">
+	      			<a :href="team.url" target="_new">Visit</a>
+	      		</div>
+	      		<div class="col-1">
+	      			<a v-if="team.roster" 
+	      			href="#" 
+	      			@click.prevent="viewRoster(team)"
+	      			class="btn btn-default">View Roster</a>
 	      		</div>
 	  		</div>
 	  		<div class="row" v-if="isTeamPage">
-		      	<button class="btn btn-primary">Add A Team From This Page</button>
+		      	<button class="btn btn-primary" @click.prevent="addTeam">Add A Team From This Page</button>
 	  		</div>
 	  		<div class="row" v-if="!isTeamPage">
 	  			<div class="alert-info">This page does not contain a team from a supported site. We currently support {{ Object.values(supportedSites).join(',') }}. If this message seems wrong, try refreshing the page.</div>
 	  		</div>
+  		</div>
+  		<div class="container" v-if="currentSite == 'thebaseballgauge.com'">
+  			<h1>Yo</h1>
   		</div>
   </div>
 </template>
@@ -30,11 +45,20 @@
 				supportedSites: {'cbssports.com': 'CBS', 'yahoo.com': 'Yahoo'}
 			}
 		},
-		mounted() {
+		watch: {
+			teams: {
+				handler: function (val, oldVal) {
+					console.log('teams changed');
+					chrome.storage.local.set({'teams': this.teams});
+				},
+				deep: true
+		    }
+		},
+		created() {
 			if (!chrome || !chrome.storage) {
 				// For local development
-				this.teams = [{ url: 'http://grannywhitepikeleague.baseball.cbssports.com/teams', showNameBox: false, 'name': 'Piker' },
-				{ url: 'https://baseball.fantasysports.yahoo.com/b1/38839/10', showNameBox: false, name: 'Paul' }];
+				this.teams = [{ id: 1, url: 'http://grannywhitepikeleague.baseball.cbssports.com/teams', editing: false, 'name': 'Piker' },
+				{ id: 2, url: 'https://baseball.fantasysports.yahoo.com/b1/38839/10', editing: false, name: 'Paul' }];
 			} else {
 				var self = this;
 				chrome.storage.local.get(['teams', 'current_page'], items => {
@@ -42,7 +66,7 @@
 					console.log(items.teams);
 					console.log('Current Page: ' + items.current_page);
 					self.teams = items.teams.map(t => {
-						t.showNameBox = false;
+						t.editing = false;
 						return t;
 					});
 					self.currentPage = items.current_page;
@@ -66,16 +90,22 @@
 				}
 			},
 			currentSiteIsSupported() {
+				console.log('Running currentSiteIsSupported');
+				console.log('CurrentSite = ' + this.currentSite);
+				console.log(this.supportedSites);
 				return !!this.supportedSites[this.currentSite];
 			},
 			isTeamPage() {
+				console.log('Running isTeamPage()');
+				console.log('CurrentPage = ' + this.currentPage);
 				if (this.currentPage && this.currentSiteIsSupported) {
+					console.log('CurrentPage exists and currentSiteIsSupported is true');
 					var urlPieces = this.currentPage.split('/');
 					if (this.supportedSites[this.currentSite] === 'CBS') {
 						return urlPieces[3] === 'teams';
 					}
 					if (this.supportedSites[this.currentSite] === 'Yahoo') {
-						return urlPieces[3] === 'b1' && parseInt(urlPieces[5] > 0);
+						return urlPieces[3] === 'b1' && parseInt(urlPieces[5]) > 0;
 					}
 				} else {
 					return false;
@@ -83,16 +113,22 @@
 			}
 		},
 		methods: {
-			showNameBox(team) {
-				var teamIdx = this.teams.findIndex(t => t.url === team.url);
-				Vue.set(this.teams[teamIdx], 'showNameBox', true);
+			remove(team) {
+				if (confirm('Are you sure you want to delete this team?')) {
+					this.teams.splice(this.teams.findIndex(t => t.url === team.url), 1);
+				}
 			},
-			addName(team, name) {
-				// This is not right
-				Vue.set(this.teams, this.teams.findIndex(t => t.url === team.url),name);
+			addTeam() {
+				this.teams.push({
+					id: this.teams.reduce((acc, cur) => cur.id > acc ? cur.id : acc, 0) + 1,
+					url: this.currentPage,
+					editing: true,
+					name: this.supportedSites[this.currentSite], 
+					roster: []
+				})
 			},
-			save() {
-				chrome.storage.local.set({teams: this.teams});
+			viewRoster(team) {
+				alert('Not yet implemented');
 			}
 		}
   }
